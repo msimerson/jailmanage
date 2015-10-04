@@ -1,26 +1,7 @@
 #!/bin/sh
 #
-# Install/update with this command:
-#   fetch -o /usr/local/sbin/jailmanage http://www.tnpi.net/computing/freebsd/jail_manage.txt
-#   chmod 755 /usr/local/sbin/jailmanage
-#
 # by Matt Simerson
-# Dec 19, 2014 - 'update' optimizes freebsd-update.conf in jails
-# Dec 07, 2014 - improvements for 'update'
-# Nov 14, 2014 - added 'update' target
-# Aug 24, 2014 - only run pkg audit when pkgng installed
-# Mar  2, 2014 - build list of jails from /etc/jail.conf (and legacy ezjail)
-#              - run "pkg audit" within the jail before entry
-# Jan  2, 2014 - removed ezjail dependency
-# Dec  1, 2013 - fixed typo: installng -> installing
-# Feb 12, 2013 - use local vars, added fix_jailname()
-# Oct 19, 2012 - compatible with jail names with a . in them
-# Apr 22, 2010 - added mergemaster feature
-# Feb 02, 2009 - added support for jail names with - in name (ezjail compat)
-# Sep 27, 2007 - added all target
-# Sep 23, 2007 - added tripwire
-# Sep 18, 2007 - added sudo
-# Sep 16, 2007 - initial authoring
+# Source Code: https://github.com/msimerson/jailmanage
 
 # configurable settings
 JAILBASE="/jails"
@@ -36,6 +17,7 @@ usage() {
     echo " all         - consecutively log into each jail "
     echo " mergemaster - run mergemaster in each jail"
     echo " update      - run freebsd-update in each jail"
+    echo " cleanup     - purges file caches"
     echo " "
     exit
 }
@@ -104,8 +86,7 @@ jail_manage()
 
     echo "all done!"
 
-    if [ $_i_mounted -eq 1 ];
-    then
+    if [ $_i_mounted -eq 1 ]; then
         _unmount_ports $_jail
     fi
 
@@ -124,6 +105,7 @@ jail_mergemaster()
 
     local CMD="mergemaster -FU -D $_jaildir"
     echo "$SUDO $CMD"
+    sleep 2
     $SUDO $CMD
 
     echo "all done with $1!"
@@ -216,6 +198,28 @@ jail_update()
     fi
 
     echo "   done with $1"
+}
+
+jail_cleanup()
+{
+    local _jail="$1"
+    local _jaildir="$JAILBASE/$_jail"
+
+    if [ -z "$_jail" ]; then
+        echo " didn't receive the jail name!" && echo
+        return
+    fi
+
+    sleep 1
+    DIRS="/var/cache/pkg /var/db/freebsd-update"
+    for dir in $DIRS
+    do
+        local CMD="rm -rf $_jaildir$dir/*"
+        echo "$SUDO $CMD"
+        $SUDO $CMD
+    done
+
+    echo "    done with $1!"
 }
 
 check_base()
@@ -323,7 +327,6 @@ case "$1" in
         for _j in $ALL_JAILS;
         do
             echo "Doing mergemaster for jail $_j"
-            sleep 2
             jail_mergemaster $_j
         done
     ;;
@@ -334,6 +337,14 @@ case "$1" in
             echo "freebsd-update for jail $_j"
             sleep 2
             jail_update $_j
+        done
+    ;;
+    "cleanup"   )
+        _get_all_jails
+        for _j in $ALL_JAILS;
+        do
+            echo "Doing cleanup for jail $_j"
+            jail_cleanup $_j
         done
     ;;
     *)
