@@ -1,5 +1,9 @@
 # Changes
 
+- Dec 29, 2015
+    - better parsing of jail names
+    - lint cleanups
+    - mount hosts pkg cache
 - Oct 04, 2015 - added 'cleanup' target
 - Dec 19, 2014 - 'update' optimizes freebsd-update.conf in jails
 - Dec 07, 2014 - improvements for 'update'
