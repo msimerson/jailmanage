@@ -2,7 +2,7 @@ language: bash
 
 cache:
   directories:
-    - /home/travis/.stack
+#   - /home/travis/.stack
 
 addons:
   apt:
@@ -14,7 +14,7 @@ addons:
 before_install:
 
 install:
-    - test -f jail-manage.sh
+    - test -f jailmanage.sh
 
 before_script:
 
