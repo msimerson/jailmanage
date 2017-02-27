@@ -2,7 +2,9 @@
 #
 # by Matt Simerson
 # Source Code: https://github.com/msimerson/jailmanage
-# Install/Update: fetch -o /usr/local/sbin/jailmanage https://raw.githubusercontent.com/msimerson/jailmanage/master/jailmanage.sh
+# Install/Update:
+#	fetch -o /usr/local/sbin/jailmanage https://raw.githubusercontent.com/msimerson/jailmanage/master/jailmanage.sh
+#   chmod 755 /usr/local/sbin/jailmanage
 
 # configurable settings
 JAILBASE="/jails"
@@ -57,11 +59,14 @@ jail_manage()
 	local _pkg_dir="$JAILBASE/$_jail/var/db/pkg"
 	if [ -f "$_pkg_dir/local.sqlite" ]; then
 		if [ ! -f "$_pkg_dir/vuln.xml" ]; then
+			# shellcheck disable=SC2086
 			$SUDO $_jexec pkg audit -F
 		else
+			# shellcheck disable=SC2086
 			$SUDO $_jexec pkg audit
 		fi
 	fi
+	# shellcheck disable=SC2086
 	$SUDO $_jexec su -
 
 	echo "all done!"
@@ -88,6 +93,7 @@ jail_mergemaster()
 	local CMD="mergemaster -FU -D $_jaildir"
 	echo "$SUDO $CMD"
 	sleep 2
+	# shellcheck disable=SC2086
 	$SUDO $CMD
 
 	echo "all done with $1!"
@@ -130,11 +136,13 @@ check_tripwire()
 	local _jexec="/usr/sbin/jexec $_jail_id"
 
 	echo "$SUDO $_jexec /usr/local/sbin/tripwire -m c"
+	# shellcheck disable=SC2086
 	$SUDO $_jexec /usr/local/sbin/tripwire -m c
 
 	# update the database
 	local _last_report
 	_last_report=$($SUDO /bin/ls "$_jaildir/var/db/tripwire/report" | tail -n1)
+	# shellcheck disable=SC2086
 	$SUDO $_jexec /usr/local/sbin/tripwire -m u -a -r \
 		"$_jaildir/var/db/tripwire/report/$_last_report"
 }
@@ -181,7 +189,9 @@ jail_update()
 			local _upcmd="$_update -r $HOST_MAJ_VER upgrade install"
 			echo "    $SUDO $_upcmd"
 			$SUDO env UNAME_r="$JAIL_VER $_upcmd"
+			# shellcheck disable=SC2086
 			$SUDO $_update install
+			# shellcheck disable=SC2086
 			$SUDO $_update install
 		fi
 	fi
@@ -205,6 +215,7 @@ jail_cleanup()
 	do
 		local CMD="rm -rf $_jaildir$dir/*"
 		echo "	$SUDO $CMD"
+		# shellcheck disable=SC2086
 		$SUDO $CMD
 	done
 
