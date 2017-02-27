@@ -115,12 +115,12 @@ check_tripwire()
 	local MAIL_VIOL; MAIL_VIOL=$($SUDO grep LNOV "$_tw_cfg" | grep -v true)
 
 	if [ -z "$MAIL_VIOL" ]; then
-	    dialog --yesno "Tripwire is configured to spam you daily. Would you like to only get emails if violations are found?" 8 60
-	    if [ $? -eq 0 ]; then
+		dialog --yesno "Tripwire is configured to spam you daily. Would you like to only get emails if violations are found?" 8 60
+		if [ $? -eq 0 ]; then
 			echo "sed -i .bak -e 's/MAILNOVIOLATIONS =true/MAILNOVIOLATIONS =false/g' $_tw_cfg"
 			$SUDO sed -i .bak -e 's/MAILNOVIOLATIONS =true/MAILNOVIOLATIONS =false/g' "$_tw_cfg"
-	    fi
-	    #echo "mail_viol: $MAIL_VIOL"
+		fi
+		#echo "mail_viol: $MAIL_VIOL"
 	fi
 
 	# run the tripwire check script
@@ -135,7 +135,7 @@ check_tripwire()
 	local _last_report
 	_last_report=$($SUDO /bin/ls "$_jaildir/var/db/tripwire/report" | tail -n1)
 	$SUDO $_jexec /usr/local/sbin/tripwire -m u -a -r \
-	    "$_jaildir/var/db/tripwire/report/$_last_report"
+		"$_jaildir/var/db/tripwire/report/$_last_report"
 }
 
 jail_update()
@@ -143,8 +143,8 @@ jail_update()
 	local _jail="$1"
 
 	if [ -z "$_jail" ]; then
-	    echo " didn't receive the jail name!" && echo
-	    return
+		echo " didn't receive the jail name!" && echo
+		return
 	fi
 
 	local _jaildir="$JAILBASE/$_jail"
@@ -155,22 +155,22 @@ jail_update()
 	JAIL_MAJ_VER=$("$_jaildir/bin/freebsd-version" | /usr/bin/cut -f1-2 -d'-')
 
 	local _fuconf="$_jaildir/etc/freebsd-update.conf"
-	local _update="freebsd-update -b $_jaildir -f $_fuconf"
+	local _update="/usr/sbin/freebsd-update -b $_jaildir -f $_fuconf"
 
 	if [ "$HOST_MAJ_VER" = "$JAIL_MAJ_VER" ];
 	then
-	    echo "$SUDO $_update fetch install"
-	    $SUDO "$_update" fetch install
+		echo "$SUDO $_update fetch install"
+		$SUDO "$_update" fetch install
 	else
 		local HOST_VER JAIL_VER
-	    HOST_VER=$(/bin/freebsd-version)
-	    JAIL_VER=$("$_jaildir/bin/freebsd-version")
-	    echo "   jail $1 at version $JAIL_VER"
+		HOST_VER=$(/bin/freebsd-version)
+		JAIL_VER=$("$_jaildir/bin/freebsd-version")
+		echo "   jail $1 at version $JAIL_VER"
 
 		if [ "$HOST_VER" = "$JAIL_VER" ];
-	    then
+		then
 			echo "   upgrade complete, skipping"
-	    else
+		else
 			sed -i .bak \
 				-e 's/^Components.*/Components world kernel/' \
 				-e 's/^# BackupKernel .*/BackupKernel no/' \
@@ -178,7 +178,7 @@ jail_update()
 				"$_fuconf"
 
 			local _upcmd="$_update -r $HOST_MAJ_VER upgrade install"
-			echo "   $SUDO $_upcmd"
+			echo "    $SUDO $_upcmd"
 			$SUDO env UNAME_r="$JAIL_VER $_upcmd"
 			$SUDO $_update install
 			$SUDO $_update install
@@ -203,7 +203,7 @@ jail_cleanup()
 	for dir in $DIRS
 	do
 		local CMD="rm -rf $_jaildir$dir/*"
-		echo "    $SUDO $CMD"
+		echo "	$SUDO $CMD"
 		$SUDO $CMD
 	done
 
