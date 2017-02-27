@@ -1,0 +1,28 @@
+language: bash
+
+cache:
+  directories:
+    - /home/travis/.stack
+
+addons:
+  apt:
+    sources:
+      - debian-sid
+    packages:
+      - shellcheck
+
+before_install:
+
+install:
+    - test -f jail-manage.sh
+
+before_script:
+
+script:
+   - bash -n *.sh
+   - shellcheck *.sh
+
+after_success:
+after_failure:
+after_script:
+
