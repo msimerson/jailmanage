@@ -20,7 +20,7 @@ before_script:
 
 script:
    - bash -n *.sh
-   - shellcheck *.sh
+   - shellcheck -e SC2039 *.sh
 
 after_success:
 after_failure:
