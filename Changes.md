@@ -1,5 +1,14 @@
 # Changes
 
+- 2017-02-27 
+    - consistently use tabs for indent
+    - update() can now specify a single jail to update
+- 2016-12-29 
+    - better parsing of jail names
+    - lint cleanups
+    - mount hosts pkg cache
+- 2016-01-18 
+    - name parsing, lint, pkg cache
 - Dec 29, 2015
     - better parsing of jail names
     - lint cleanups

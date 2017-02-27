@@ -2,6 +2,7 @@
 #
 # by Matt Simerson
 # Source Code: https://github.com/msimerson/jailmanage
+# Install/Update: fetch -o /usr/local/sbin/jailmanage https://raw.githubusercontent.com/msimerson/jailmanage/master/jailmanage.sh
 
 # configurable settings
 JAILBASE="/jails"
@@ -349,13 +350,19 @@ case "$1" in
 		done
 	;;
 	"update"   )
-		_get_all_jails
-		for _j in $ALL_JAILS;
-		do
-			echo "freebsd-update for jail $_j"
-			sleep 2
-			jail_update "$_j"
-		done
+		if [ -z "$2" ];
+		then
+			_get_all_jails
+			for _j in $ALL_JAILS;
+			do
+				echo "freebsd-update for jail $_j"
+				sleep 2
+				jail_update "$_j"
+			done
+		else
+			echo "freebsd-update for jail $2"
+			jail_update "$2"
+		fi
 	;;
 	"cleanup"   )
 		_get_all_jails
