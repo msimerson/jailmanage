@@ -3,6 +3,7 @@
 - 2017-02-27 
     - consistently use tabs for indent
     - update() can now specify a single jail to update
+    - check jail.conf jail declaration for path setting
 - 2016-12-29 
     - better parsing of jail names
     - lint cleanups

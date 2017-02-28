@@ -31,7 +31,7 @@ fi
 
 fix_jailname()
 {
-	# ezjail renames char - to _
+	# renames chars - and . to _
 	echo "$1" | sed -e 's/\-\./_/g'
 }
 
@@ -52,11 +52,19 @@ jail_manage()
 		_jexec="/usr/sbin/jexec $(fix_jailname "$_jail")"
 	fi
 
-	_mount_ports "$_jail"
-	local _i_mounted=$?
-	_mount_pkg_cache "$_jail"
+	local _jail_fixed; _jail_fixed=$(fix_jailname "$1")
+	local _jail_root_path; _jail_root_path=$(jail_root_path "$_jail_fixed")
 
-	local _pkg_dir="$JAILBASE/$_jail/var/db/pkg"
+	if [ ! -d "$_jail_root_path" ]; then
+		echo "skipping $_jail, non-existent $_jail_root_path root path"
+		return
+	fi
+
+	_mount_ports "$_jail_fixed" "$_jail_root_path"
+	local _i_mounted=$?
+	_mount_pkg_cache "$_jail_fixed" "$_jail_root_path"
+
+	local _pkg_dir="$_jail_root_path/var/db/pkg"
 	if [ -f "$_pkg_dir/local.sqlite" ]; then
 		if [ ! -f "$_pkg_dir/vuln.xml" ]; then
 			# shellcheck disable=SC2086
@@ -72,25 +80,25 @@ jail_manage()
 	echo "all done!"
 
 	if [ "$_i_mounted" -eq 1 ]; then
-		_unmount_ports "$_jail"
+		_unmount_ports "$_jail_root_path"
 	fi
 
-	_unmount_pkg_cache "$_jail"
+	_unmount_pkg_cache "$_jail_root_path"
 
-	check_tripwire "$_jail"
+	check_tripwire "$_jail" "$_jail_root_path"
 }
 
 jail_mergemaster()
 {
-	local _jail="$1"
-	local _jaildir="$JAILBASE/$_jail"
-
-	if [ -z "$_jail" ]; then
+	if [ -z "$1" ]; then
 		echo " didn't receive the jail name!" && echo
 		return
 	fi
 
-	local CMD="mergemaster -FU -D $_jaildir"
+	local _jail_root_path;
+	_jail_root_path=$(jail_root_path "$(fix_jailname "$1")")
+
+	local CMD="mergemaster -FU -D $_jail_root_path"
 	echo "$SUDO $CMD"
 	sleep 2
 	# shellcheck disable=SC2086
@@ -102,7 +110,7 @@ jail_mergemaster()
 check_tripwire()
 {
 	local _jail="$1"
-	local _jaildir="$JAILBASE/$_jail"
+	local _jaildir="$2"
 
 	if [ ! -d "$_jaildir/var/db/tripwire" ];
 	then
@@ -149,22 +157,26 @@ check_tripwire()
 
 jail_update()
 {
-	local _jail="$1"
-
-	if [ -z "$_jail" ]; then
+	if [ -z "$1" ]; then
 		echo " didn't receive the jail name!" && echo
 		return
 	fi
 
-	local _jaildir="$JAILBASE/$_jail"
+	local _jail_fixed; _jail_fixed=$(fix_jailname "$1")
+	local _jail_root_path; _jail_root_path=$(jail_root_path "$_jail_fixed")
 	local _jexec="/usr/sbin/jexec $_jail_id"
+
+	if [ ! -d "$_jail_root_path" ]; then
+		echo "skipping $1, non-existent $_jail_root_path root path"
+		return
+	fi
 
 	local HOST_MAJ_VER JAIL_MAJ_VER
 	HOST_MAJ_VER=$(/bin/freebsd-version | /usr/bin/cut -f1-2 -d'-')
-	JAIL_MAJ_VER=$("$_jaildir/bin/freebsd-version" | /usr/bin/cut -f1-2 -d'-')
+	JAIL_MAJ_VER=$("$_jail_root_path/bin/freebsd-version" | /usr/bin/cut -f1-2 -d'-')
 
-	local _fuconf="$_jaildir/etc/freebsd-update.conf"
-	local _update="/usr/sbin/freebsd-update -b $_jaildir -f $_fuconf"
+	local _fuconf="$_jail_root_path/etc/freebsd-update.conf"
+	local _update="/usr/sbin/freebsd-update -b $_jail_root_path -f $_fuconf"
 
 	if [ "$HOST_MAJ_VER" = "$JAIL_MAJ_VER" ];
 	then
@@ -173,7 +185,7 @@ jail_update()
 	else
 		local HOST_VER JAIL_VER
 		HOST_VER=$(/bin/freebsd-version)
-		JAIL_VER=$("$_jaildir/bin/freebsd-version")
+		JAIL_VER=$("$_jail_root_path/bin/freebsd-version")
 		echo "   jail $1 at version $JAIL_VER"
 
 		if [ "$HOST_VER" = "$JAIL_VER" ];
@@ -201,20 +213,20 @@ jail_update()
 
 jail_cleanup()
 {
-	local _jail="$1"
-	local _jaildir="$JAILBASE/$_jail"
-
-	if [ -z "$_jail" ]; then
+	if [ -z "$1" ]; then
 		echo " didn't receive the jail name!" && echo
 		return
 	fi
 
-	sleep 1
+	local _jail_root_path;
+	_jail_root_path=$(jail_root_path "$(fix_jailname "$1")")
+
 	DIRS="/var/cache/pkg /var/db/freebsd-update"
 	for dir in $DIRS
 	do
-		local CMD="rm -rf $_jaildir$dir/*"
+		local CMD="rm -rf $_jailpath$dir/*"
 		echo "	$SUDO $CMD"
+		sleep 1
 		# shellcheck disable=SC2086
 		$SUDO $CMD
 	done
@@ -245,10 +257,29 @@ check_sudo()
 	fi
 }
 
+jail_root_path()
+{
+	local _jailpath
+
+	# look for a path declaration in jails declaration block
+	_jailpath=$(grep -A10 "^$1" /etc/jail.conf \
+		| awk '{if ($0 ~ /{/) {found=1;} if (found) {print; if ($0 ~ /}/) { exit;}}}' \
+		| grep -E '^[[:space:]]*path' \
+		| cut -f2 -d= | cut -f2 -d'"')
+
+	# no declaration, use default
+	if [ -z "$_jailpath" ]; then
+		echo "$JAILBASE/$1"
+		return
+	fi
+
+	echo "$_jailpath"
+}
+
 _mount_ports()
 {
 	local _jail; _jail=$(fix_jailname "$1")
-	local _ports_dir="$JAILBASE/$_jail/usr/ports"
+	local _ports_dir="$2/usr/ports"
 
 	if mount -t nullfs | grep -q "$_ports_dir"; then
 		echo "ports dir already mounted"
@@ -275,8 +306,7 @@ _mount_ports()
 
 _unmount_ports()
 {
-	local _jail="$1"
-	local _ports_dir="$JAILBASE/$_jail/usr/ports"
+	local _ports_dir="$1/usr/ports"
 
 	if ! mount -t nullfs | grep -q "$_ports_dir"; then
 		echo "ports dir not mounted"
@@ -297,7 +327,7 @@ _unmount_ports()
 _mount_pkg_cache()
 {
 	local _jail; _jail=$(fix_jailname "$1")
-	local _cache_dir="$JAILBASE/$_jail/var/cache/pkg"
+	local _cache_dir="$2/var/cache/pkg"
 
 	if mount -t nullfs | grep -q "$_cache_dir"; then
 		echo "$_cache_dir already mounted"
@@ -310,8 +340,7 @@ _mount_pkg_cache()
 
 _unmount_pkg_cache()
 {
-	local _jail; _jail=$(fix_jailname "$1")
-	local _cache_dir="$JAILBASE/$_jail/var/cache/pkg"
+	local _cache_dir="$1/var/cache/pkg"
 
 	if ! mount -t nullfs | grep -q "$_cache_dir"; then
 		echo "$_cache_dir not mounted"
