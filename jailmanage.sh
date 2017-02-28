@@ -181,7 +181,8 @@ jail_update()
 	if [ "$HOST_MAJ_VER" = "$JAIL_MAJ_VER" ];
 	then
 		echo "$SUDO $_update fetch install"
-		$SUDO "$_update" fetch install
+		# shellcheck disable=SC2086
+		$SUDO $_update fetch install
 	else
 		local HOST_VER JAIL_VER
 		HOST_VER=$(/bin/freebsd-version)
