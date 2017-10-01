@@ -64,6 +64,15 @@ jail_manage()
 	local _i_mounted=$?
 	_mount_pkg_cache "$_jail_fixed" "$_jail_root_path"
 
+	if [ ! -f "$_jail_root_path/usr/local/etc/pkg/repos/FreeBSD.conf" ]; then
+		$SUDO mkdir -p "$_jail_root_path/usr/local/etc/pkg/repos" || exit
+		$SUDO tee "$_jail_root_path/usr/local/etc/pkg/repos/FreeBSD.conf" <<EO_PKG_CONF
+FreeBSD: {
+  url: "pkg+http://pkg.FreeBSD.org/\${ABI}/latest"
+}
+EO_PKG_CONF
+	fi
+
 	local _pkg_dir="$_jail_root_path/var/db/pkg"
 	if [ -f "$_pkg_dir/local.sqlite" ]; then
 		if [ ! -f "$_pkg_dir/vuln.xml" ]; then
