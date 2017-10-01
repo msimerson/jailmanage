@@ -127,8 +127,8 @@ check_tripwire()
 		return
 	fi
 
-	dialog --yesno "The jail $_jail has tripwire installed. If you made changes to the file system, you should update the tripwire database. Do you want to update now?" 8 60
-	if [ $? -ne 0 ]; then
+	local _updmsg="The jail $_jail has tripwire installed. If you made changes to the file system, you should update the tripwire database. Do you want to update now?"
+	if ! dialog --yesno "$_updmsg" 8 60; then
 		return
 	fi
 
@@ -139,8 +139,8 @@ check_tripwire()
 	local MAIL_VIOL; MAIL_VIOL=$($SUDO grep LNOV "$_tw_cfg" | grep -v true)
 
 	if [ -z "$MAIL_VIOL" ]; then
-		dialog --yesno "Tripwire is configured to spam you daily. Would you like to only get emails if violations are found?" 8 60
-		if [ $? -eq 0 ]; then
+		local _emailmsg="Tripwire is configured to spam you daily. Would you like to only get emails if violations are found?"
+		if dialog --yesno "$_emailmsg" 8 60; then
 			echo "sed -i .bak -e 's/MAILNOVIOLATIONS =true/MAILNOVIOLATIONS =false/g' $_tw_cfg"
 			$SUDO sed -i .bak -e 's/MAILNOVIOLATIONS =true/MAILNOVIOLATIONS =false/g' "$_tw_cfg"
 		fi
