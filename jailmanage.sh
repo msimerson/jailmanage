@@ -210,7 +210,8 @@ jail_update()
 
 			local _upcmd="$_update -r $HOST_MAJ_VER upgrade install"
 			echo "    $SUDO $_upcmd"
-			$SUDO env UNAME_r="$JAIL_VER $_upcmd"
+			# shellcheck disable=SC2086
+			$SUDO env UNAME_r=$JAIL_VER $_upcmd
 			# shellcheck disable=SC2086
 			$SUDO $_update install
 			# shellcheck disable=SC2086

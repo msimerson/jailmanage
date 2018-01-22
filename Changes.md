@@ -1,5 +1,7 @@
 # Changes
 
+- 2018-01-19 
+    - fix quoting for 'jailmanage update'
 - 2017-02-27 
     - consistently use tabs for indent
     - update() can now specify a single jail to update
