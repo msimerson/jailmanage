@@ -1,21 +1,35 @@
-# Changes
+## Changes
 
-- 2018-01-19 
-    - fix quoting for 'jailmanage update'
-- 2017-02-27 
-    - consistently use tabs for indent
-    - update() can now specify a single jail to update
-    - check jail.conf jail declaration for path setting
-- 2016-12-29 
-    - better parsing of jail names
-    - lint cleanups
-    - mount hosts pkg cache
-- 2016-01-18 
-    - name parsing, lint, pkg cache
-- Dec 29, 2015
-    - better parsing of jail names
-    - lint cleanups
-    - mount hosts pkg cache
+### 2019-11-07
+
+- added selfupdate()
+
+### 2018-01-19
+
+- fix quoting for 'jailmanage update'
+
+### 2017-02-27
+
+- consistently use tabs for indent
+- update() can now specify a single jail to update
+- check jail.conf jail declaration for path setting
+
+### 2016-12-29
+
+- better parsing of jail names
+- lint cleanups
+- mount hosts pkg cache
+
+### 2016-01-18
+
+- name parsing, lint, pkg cache
+
+### Dec 29, 2015
+
+- better parsing of jail names
+- lint cleanups
+- mount hosts pkg cache
+
 - Oct 04, 2015 - added 'cleanup' target
 - Dec 19, 2014 - 'update' optimizes freebsd-update.conf in jails
 - Dec 07, 2014 - improvements for 'update'

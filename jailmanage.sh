@@ -1,10 +1,10 @@
 #!/bin/sh
 #
+# VERSION: 2019-11-07
+#
 # by Matt Simerson
-# Source Code: https://github.com/msimerson/jailmanage
-# Install/Update:
-#	fetch -o /usr/local/sbin/jailmanage https://raw.githubusercontent.com/msimerson/jailmanage/master/jailmanage.sh
-#   chmod 755 /usr/local/sbin/jailmanage
+# Source: https://github.com/msimerson/jailmanage
+# INSTALL or upgrade, copy/paste the commands in selfupgrade()
 
 # configurable settings
 JAILBASE="/jails"
@@ -20,6 +20,7 @@ usage() {
 	echo " mergemaster - run mergemaster in each jail"
 	echo " update      - run freebsd-update in each jail"
 	echo " cleanup     - purges file caches"
+	echo " selfupgrade - upgrade jailmanage script"
 	echo " "
 	exit
 }
@@ -28,6 +29,13 @@ if [ -z "$1" ];
 then
 	usage
 fi
+
+selfupgrade()
+{
+    export _jm=/usr/local/bin/jailmanage
+	export _jmurl=https://raw.githubusercontent.com/msimerson/jailmanage/master/jailmanage.sh
+    fetch -o $_jm -i $_jm $_jmurl && chmod 755 $_jm
+}
 
 fix_jailname()
 {
@@ -414,6 +422,9 @@ case "$1" in
 			echo "freebsd-update for jail $2"
 			jail_update "$2"
 		fi
+	;;
+	"selfupgrade"   )
+		selfupgrade
 	;;
 	"cleanup"   )
 		_get_all_jails
