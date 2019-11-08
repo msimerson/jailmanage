@@ -32,9 +32,9 @@ fi
 
 selfupgrade()
 {
-    export _jm=/usr/local/bin/jailmanage
+	export _jm=/usr/local/bin/jailmanage
 	export _jmurl=https://raw.githubusercontent.com/msimerson/jailmanage/master/jailmanage.sh
-    fetch -o $_jm -i $_jm $_jmurl && chmod 755 $_jm
+	fetch -o $_jm -m $_jmurl && chmod 755 $_jm
 }
 
 fix_jailname()
