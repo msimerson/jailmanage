@@ -14,15 +14,17 @@ chmod 755 /usr/local/sbin/jailmanage
 ## Usage
 
 ````
-$ ./jailmanage.sh 
-   usage: ./jailmanage.sh [ jailname ]
+$ ./jailmanage.sh
+    usage: ./jailmanage.sh [ jailname ]
     
-   jailname also has several "special" jail names:
+    jailname has several "special" jail names:
 
-      all         - consecutively log into each jail 
-      mergemaster - run mergemaster in each jail
+      all         - consecutively log into each running jail
+      versions    - report versions of each runnning jail
       update      - run freebsd-update in each jail
-      cleanup     - delete stale cached files
+      mergemaster - run mergemaster in each jail
+      cleanup     - delete cached files
+      selfupgrade - upgrade this script
 ````
 
 ### Enter each jail
@@ -45,7 +47,7 @@ freebsd-update -b /jails/dns -f /jails/dns/etc/freebsd-update.conf install
 
 If `jailmanage` detects that the jail is running an older major version of
 FreeBSD than the host (ex: host is running 10.2 and jail is running 10.1),
-then jailmanage will perform a binary upgrade of FreeBSD using these commands:  
+then jailmanage will perform a binary upgrade of FreeBSD using these commands:
 
 ```
 freebsd-update -b /jails/dns -f /jails/dns/etc/freebsd-update.conf -r 10.2-RELEASE upgrade install
@@ -53,7 +55,7 @@ freebsd-update -b /jails/dns -f /jails/dns/etc/freebsd-update.conf install
 freebsd-update -b /jails/dns -f /jails/dns/etc/freebsd-update.conf install
 ```
 
-### Delete cached files
+### Delete caches
 
 ```
 jailmanage cleanup

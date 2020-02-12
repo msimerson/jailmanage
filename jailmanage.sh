@@ -1,14 +1,16 @@
 #!/bin/sh
 #
-# VERSION: 2019-11-07
+# VERSION: 2020-02-11
 #
 # by Matt Simerson
 # Source: https://github.com/msimerson/jailmanage
 # INSTALL or upgrade, copy/paste the commands in selfupgrade()
+# shellcheck disable=SC2039
 
 # configurable settings
 JAILBASE="/jails"
 ALL_JAILS=''
+RUNNING_JAILS=''
 SUDO=''
 
 usage() {
@@ -16,10 +18,11 @@ usage() {
 	echo " "
 	echo " jailname has several special jail names:"
 	echo " "
-	echo " all         - consecutively log into each jail "
-	echo " mergemaster - run mergemaster in each jail"
+	echo " all         - consecutively log into each jail"
+	echo " versions    - report versions of each jail"
 	echo " update      - run freebsd-update in each jail"
-	echo " cleanup     - purges file caches"
+	echo " cleanup     - purge pkg and freebsd-update caches"
+	echo " mergemaster - run mergemaster in each jail"
 	echo " selfupgrade - upgrade jailmanage script"
 	echo " "
 	exit
@@ -311,7 +314,7 @@ _mount_ports()
 	then
 		_fstab_dir=$(grep ports "/etc/fstab.$_jail" | cut -f2 -d" ")
 
-		if [ ! -z "$_fstab_dir" ];
+		if [ -n "$_fstab_dir" ];
 		then
 			_mnt_cmd="/sbin/mount -F /etc/fstab.$_jail $_fstab_dir"
 		fi
@@ -387,25 +390,37 @@ _get_all_jails()
 	echo "Unable to build list of jails"
 }
 
+_get_running_jails()
+{
+	RUNNING_JAILS=$(jls name)
+}
+
+_version_report()
+{
+	VERSION_REPORT="$(hostname) $(/bin/freebsd-version -u)\n"
+	VERSION_REPORT="${VERSION_REPORT}-------------- ---------------\n"
+	_get_running_jails
+	for _j in $RUNNING_JAILS;
+	do
+		JAILSTATUS=$($SUDO /usr/sbin/jexec "${_j}" /bin/freebsd-version -u)
+		if [ "${JAILSTATUS}" != "" ]; then
+			VERSION_REPORT="${VERSION_REPORT}${_j} ${JAILSTATUS}\n"
+		fi
+	done
+	echo -e "$VERSION_REPORT" | column -t
+}
+
 check_base
 check_sudo
 
 case "$1" in
 	"all"   )
-		_get_all_jails
-		for _j in $ALL_JAILS;
+		_get_running_jails
+		for _j in $RUNNING_JAILS;
 		do
 			echo "Entering jail $_j"
 			sleep 1
 			jail_manage "$_j"
-		done
-	;;
-	"mergemaster"   )
-		_get_all_jails
-		for _j in $ALL_JAILS;
-		do
-			echo "Doing mergemaster for jail $_j"
-			jail_mergemaster "$_j"
 		done
 	;;
 	"update"   )
@@ -423,6 +438,9 @@ case "$1" in
 			jail_update "$2"
 		fi
 	;;
+	"versions"   )
+		_version_report
+	;;
 	"selfupgrade"   )
 		selfupgrade
 	;;
@@ -432,6 +450,14 @@ case "$1" in
 		do
 			echo "Doing cleanup for jail $_j"
 			jail_cleanup "$_j"
+		done
+	;;
+	"mergemaster"   )
+		_get_all_jails
+		for _j in $ALL_JAILS;
+		do
+			echo "Doing mergemaster for jail $_j"
+			jail_mergemaster "$_j"
 		done
 	;;
 	*)

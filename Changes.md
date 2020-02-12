@@ -1,5 +1,10 @@
 ## Changes
 
+
+### 2020-02-11
+
+- added versions (by @Infern1)
+
 ### 2019-11-07
 
 - added selfupdate()
