@@ -12,6 +12,7 @@ addons:
       - shellcheck
 
 before_install:
+    - sudo -E apt-get -yq --no-install-suggests --no-install-recommends --allow-unauthenticated install shellcheck 
 
 install:
     - test -f jailmanage.sh

@@ -5,15 +5,20 @@ Manage FreeBSD jails
 
 ## Install
 
-````
+```sh
 fetch -o /usr/local/sbin/jailmanage https://raw.githubusercontent.com/msimerson/jailmanage/master/jailmanage.sh
 chmod 755 /usr/local/sbin/jailmanage
-````
+```
 
+## Upgrade
+
+```sh
+jailmanage selfupgrade
+```
 
 ## Usage
 
-````
+```sh
 $ ./jailmanage.sh
     usage: ./jailmanage.sh [ jailname ]
     
@@ -25,7 +30,7 @@ $ ./jailmanage.sh
       mergemaster - run mergemaster in each jail
       cleanup     - delete cached files
       selfupgrade - upgrade this script
-````
+```
 
 ### Enter each jail
 
