@@ -19,6 +19,7 @@ usage() {
 	echo " jailname has several special jail names:"
 	echo " "
 	echo " all         - consecutively log into each jail"
+    echo " audit       - run 'pkg audit' in each jail"
 	echo " versions    - report versions of each jail"
 	echo " update      - run freebsd-update in each jail"
 	echo " cleanup     - purge pkg and freebsd-update caches"
@@ -422,6 +423,22 @@ case "$1" in
 			sleep 1
 			jail_manage "$_j"
 		done
+	;;
+	"audit"   )
+		if [ -z "$2" ];
+		then
+			_get_all_jails
+			for _j in $ALL_JAILS;
+			do
+				echo "freebsd-update for jail $_j"
+				pkg --jail "$_j" audit
+				echo ""
+			done
+		else
+			echo "pkg audit for jail $2"
+			pkg --jail "$2" audit
+			echo ""
+		fi
 	;;
 	"update"   )
 		if [ -z "$2" ];

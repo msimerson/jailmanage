@@ -25,9 +25,10 @@ $ ./jailmanage.sh
     jailname has several "special" jail names:
 
       all         - consecutively log into each running jail
-      versions    - report versions of each runnning jail
       update      - run freebsd-update in each jail
+      audit       - run 'pkg audit' in each jail
       mergemaster - run mergemaster in each jail
+      versions    - report versions of each runnning jail
       cleanup     - delete cached files
       selfupgrade - upgrade this script
 ```
