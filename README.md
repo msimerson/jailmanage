@@ -6,8 +6,8 @@ Manage FreeBSD jails
 ## Install
 
 ```sh
-fetch -o /usr/local/sbin/jailmanage https://raw.githubusercontent.com/msimerson/jailmanage/master/jailmanage.sh
-chmod 755 /usr/local/sbin/jailmanage
+fetch -o /usr/local/bin/jailmanage https://raw.githubusercontent.com/msimerson/jailmanage/master/jailmanage.sh
+chmod 755 /usr/local/bin/jailmanage
 ```
 
 ## Upgrade
