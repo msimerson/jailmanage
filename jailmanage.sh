@@ -1,11 +1,10 @@
 #!/bin/sh
 #
-# VERSION: 2020-02-11
+# VERSION: 2021-11-01
 #
 # by Matt Simerson
 # Source: https://github.com/msimerson/jailmanage
 # INSTALL or upgrade, copy/paste the commands in selfupgrade()
-# shellcheck disable=SC2039
 
 # configurable settings
 JAILBASE="/jails"
@@ -19,7 +18,7 @@ usage() {
 	echo " jailname has several special jail names:"
 	echo " "
 	echo " all         - consecutively log into each jail"
-    echo " audit       - run 'pkg audit' in each jail"
+	echo " audit       - run 'pkg audit' in each jail"
 	echo " versions    - report versions of each jail"
 	echo " update      - run freebsd-update in each jail"
 	echo " cleanup     - purge pkg and freebsd-update caches"
@@ -88,14 +87,11 @@ EO_PKG_CONF
 	local _pkg_dir="$_jail_root_path/var/db/pkg"
 	if [ -f "$_pkg_dir/local.sqlite" ]; then
 		if [ ! -f "$_pkg_dir/vuln.xml" ]; then
-			# shellcheck disable=SC2086
 			$SUDO $_jexec pkg audit -F
 		else
-			# shellcheck disable=SC2086
 			$SUDO $_jexec pkg audit
 		fi
 	fi
-	# shellcheck disable=SC2086
 	$SUDO $_jexec su -
 
 	echo "all done!"
@@ -122,7 +118,6 @@ jail_mergemaster()
 	local CMD="mergemaster -FU -D $_jail_root_path"
 	echo "$SUDO $CMD"
 	sleep 2
-	# shellcheck disable=SC2086
 	$SUDO $CMD
 
 	echo "all done with $1!"
@@ -165,13 +160,11 @@ check_tripwire()
 	local _jexec="/usr/sbin/jexec $_jail_id"
 
 	echo "$SUDO $_jexec /usr/local/sbin/tripwire -m c"
-	# shellcheck disable=SC2086
 	$SUDO $_jexec /usr/local/sbin/tripwire -m c
 
 	# update the database
 	local _last_report
 	_last_report=$($SUDO /bin/ls "$_jaildir/var/db/tripwire/report" | tail -n1)
-	# shellcheck disable=SC2086
 	$SUDO $_jexec /usr/local/sbin/tripwire -m u -a -r \
 		"$_jaildir/var/db/tripwire/report/$_last_report"
 }
@@ -202,8 +195,7 @@ jail_update()
 	if [ "$HOST_MAJ_VER" = "$JAIL_MAJ_VER" ];
 	then
 		echo "$SUDO $_update fetch install"
-		# shellcheck disable=SC2086
-		$SUDO $_update fetch install
+		$SUDO env PAGER=cat $_update fetch install
 	else
 		local HOST_VER JAIL_VER
 		HOST_VER=$(/bin/freebsd-version)
@@ -222,11 +214,8 @@ jail_update()
 
 			local _upcmd="$_update -r $HOST_MAJ_VER upgrade install"
 			echo "    $SUDO $_upcmd"
-			# shellcheck disable=SC2086
-			$SUDO env UNAME_r=$JAIL_VER $_upcmd
-			# shellcheck disable=SC2086
+			$SUDO env PAGER=cat UNAME_r=$JAIL_VER $_upcmd
 			$SUDO $_update install
-			# shellcheck disable=SC2086
 			$SUDO $_update install
 		fi
 	fi
@@ -250,11 +239,32 @@ jail_cleanup()
 		local CMD="rm -rf $_jailpath$dir/*"
 		echo "	$SUDO $CMD"
 		sleep 1
-		# shellcheck disable=SC2086
 		$SUDO $CMD
 	done
 
 	echo "    done with $1!"
+}
+
+jail_audit()
+{
+	if [ -z "$2" ];
+	then
+		echo -e "$(hostname)\n\t$(pkg audit)\n"
+		_get_running_jails
+		for _j in $RUNNING_JAILS;
+		do
+			_r=$(pkg --jail "$_j" audit)
+			if [ $? -eq 0 ]; then
+				echo -e "  jail ${_j} ok"
+			else
+				echo -e "  jail ${_j} \n\t${_r}"
+			fi
+		done
+	else
+		echo "pkg audit for jail $2"
+		pkg --jail "$2" audit
+		echo ""
+	fi
 }
 
 check_base()
@@ -322,7 +332,6 @@ _mount_ports()
 	fi
 
 	echo "    $_mnt_cmd"
-	# shellcheck disable=2086
 	$SUDO $_mnt_cmd || exit
 	return 1
 }
@@ -378,7 +387,14 @@ _get_all_jails()
 {
 	if [ -f "/etc/jail.conf" ];
 	then
-		ALL_JAILS=$(grep '{' /etc/jail.conf | grep -v '^#' | awk '{ print $1 }')
+		ALL_JAILS=""
+		DEFINED_JAILS=$(grep '{' /etc/jail.conf | grep -v '^#' | awk '{ print $1 }')
+		for _j in ${DEFINED_JAILS}
+		do
+			if [ -d "$(jail_root_path $_j)" ]; then
+				ALL_JAILS="${ALL_JAILS} ${_j}"
+			fi
+		done
 		return
 	fi
 
@@ -425,20 +441,7 @@ case "$1" in
 		done
 	;;
 	"audit"   )
-		if [ -z "$2" ];
-		then
-			_get_all_jails
-			for _j in $ALL_JAILS;
-			do
-				echo "freebsd-update for jail $_j"
-				pkg --jail "$_j" audit
-				echo ""
-			done
-		else
-			echo "pkg audit for jail $2"
-			pkg --jail "$2" audit
-			echo ""
-		fi
+		jail_audit
 	;;
 	"update"   )
 		if [ -z "$2" ];
