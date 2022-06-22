@@ -24,7 +24,7 @@ usage() {
 	echo " versions    - report versions of each jail"
 	echo " update      - run freebsd-update in each jail"
 	echo " cleanup     - purge pkg and freebsd-update caches"
-  echo " send        - ship a jail between hosts"
+	echo " send        - ship a jail between hosts"
 	echo " mergemaster - run mergemaster in each jail"
 	echo " selfupgrade - upgrade jailmanage script"
 	echo " "
@@ -265,7 +265,7 @@ jail_audit()
 		done
 	else
 		echo "pkg audit for jail $2"
-		pkg --jail "$2" audit || pkg --jail haproxy audit -F
+		pkg --jail "$2" audit -F
 		echo ""
 	fi
 }
@@ -484,7 +484,7 @@ case "$1" in
 		done
 	;;
 	"audit"   )
-		jail_audit
+		jail_audit "$2"
 	;;
 	"update"   )
 		if [ -z "$2" ];
