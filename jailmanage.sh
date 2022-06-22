@@ -45,8 +45,9 @@ selfupgrade()
 
 fix_jailname()
 {
-	# renames chars - and . to _
-	echo "$1" | sed -e 's/\-\./_/g'
+	# renames chars - and . chars to _
+	# shellcheck disable=SC3060
+	echo "${1//[\-\.]/_}"
 }
 
 jail_manage()
@@ -256,6 +257,7 @@ jail_audit()
 		for _j in $RUNNING_JAILS;
 		do
 			_r=$(pkg --jail "$_j" audit)
+			# shellcheck disable=SC2181
 			if [ $? -eq 0 ]; then
 				echo -e "  jail ${_j} ok"
 			else
