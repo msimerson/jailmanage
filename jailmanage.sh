@@ -1,16 +1,18 @@
 #!/bin/sh
 #
-# VERSION: 2021-11-01
+# VERSION: 2022-06-21
 #
 # by Matt Simerson
 # Source: https://github.com/msimerson/jailmanage
 # INSTALL or upgrade, copy/paste the commands in selfupgrade()
 
 # configurable settings
-JAILBASE="/jails"
 ALL_JAILS=''
 RUNNING_JAILS=''
 SUDO=''
+ZFS_VOL="zroot"
+ZFS_DATA_MNT="/data"
+ZFS_JAIL_MNT="/jails"
 
 usage() {
 	echo "   usage: $0 [ jailname ]"
@@ -22,6 +24,7 @@ usage() {
 	echo " versions    - report versions of each jail"
 	echo " update      - run freebsd-update in each jail"
 	echo " cleanup     - purge pkg and freebsd-update caches"
+	echo " send        - ship a jail between hosts"
 	echo " mergemaster - run mergemaster in each jail"
 	echo " selfupgrade - upgrade jailmanage script"
 	echo " "
@@ -42,8 +45,9 @@ selfupgrade()
 
 fix_jailname()
 {
-	# renames chars - and . to _
-	echo "$1" | sed -e 's/\-\./_/g'
+	# renames chars - and . chars to _
+	# shellcheck disable=SC3060
+	echo "${1//[\-\.]/_}"
 }
 
 jail_manage()
@@ -247,13 +251,13 @@ jail_cleanup()
 
 jail_audit()
 {
-	if [ -z "$2" ];
-	then
+	if [ -z "$1" ]; then
 		echo -e "$(hostname)\n\t$(pkg audit)\n"
 		_get_running_jails
 		for _j in $RUNNING_JAILS;
 		do
 			_r=$(pkg --jail "$_j" audit)
+			# shellcheck disable=SC2181
 			if [ $? -eq 0 ]; then
 				echo -e "  jail ${_j} ok"
 			else
@@ -261,16 +265,55 @@ jail_audit()
 			fi
 		done
 	else
-		echo "pkg audit for jail $2"
-		pkg --jail "$2" audit
+		echo "pkg audit for jail $1"
+		pkg --jail "$1" audit -F
 		echo ""
 	fi
 }
 
+jail_send()
+{
+	if [ -z "$2" ]; then
+		echo "usage: jailmanage [jail name] [target host]"
+		exit
+	fi
+
+	echo " ***  send jail $1 to $2  ***"
+
+	TODAY=$(date +%Y-%m-%d)
+	JAIL_SNAP="${ZFS_VOL}${ZFS_JAIL_MNT}/${1}@${TODAY}"
+	DATA_SNAP="${ZFS_VOL}${ZFS_DATA_MNT}/${1}@${TODAY}"
+
+	# see if remote snapshot exists
+	_match=$(ssh "$2" zfs list -t snapshot | grep "$JAIL_SNAP")
+	if [ -n "$_match" ]; then
+		echo "remote snapshot exists: $JAIL_SNAP"
+		exit
+	fi
+
+	_match=$(zfs list -t snapshot | grep "$JAIL_SNAP")
+	if [ -n "$_match" ]; then
+		echo "local snapshot exists: $JAIL_SNAP"
+	else
+		echo "creating local snapshot: $JAIL_SNAP"
+		service jail stop "$1"
+		sleep 1
+		zfs snapshot "$JAIL_SNAP"
+		zfs snapshot "$DATA_SNAP"
+		service jail start "$1"
+	fi
+
+	echo "zfs send snapshot: $JAIL_SNAP"
+	# shellcheck disable=SC2029
+	zfs send "$JAIL_SNAP" | ssh "$2" zfs receive "$JAIL_SNAP"
+	# shellcheck disable=SC2029
+	zfs send "$DATA_SNAP" | ssh "$2" zfs receive "$DATA_SNAP"
+}
+
 check_base()
 {
-	if [ ! -d $JAILBASE ]; then
-		echo "Oops! please edit this script and set JAILBASE!"
+	if [ ! -d $ZFS_JAIL_MNT ]; then
+		echo "Err! please edit this script and set ZFS_JAIL_MNT!"
 		exit
 	fi
 }
@@ -278,10 +321,7 @@ check_base()
 check_sudo()
 {
 	local _uid; _uid=$(whoami)
-	if [ "$_uid" = 'root' ];
-	then
-		return
-	fi
+	if [ "$_uid" = 'root' ]; then return; fi
 	echo "running as $_uid, using sudo"
 
 	if [ -x "/usr/local/bin/sudo" ];
@@ -302,7 +342,7 @@ jail_root_path()
 
 	# no declaration, use default
 	if [ -z "$_jailpath" ]; then
-		echo "$JAILBASE/$1"
+		echo "$ZFS_JAIL_MNT/$1"
 		return
 	fi
 
@@ -441,7 +481,7 @@ case "$1" in
 		done
 	;;
 	"audit"   )
-		jail_audit
+		jail_audit "$2"
 	;;
 	"update"   )
 		if [ -z "$2" ];
@@ -460,6 +500,9 @@ case "$1" in
 	;;
 	"versions"   )
 		_version_report
+	;;
+	"send"   )
+		jail_send "$2" "$3"
 	;;
 	"selfupgrade"   )
 		selfupgrade
