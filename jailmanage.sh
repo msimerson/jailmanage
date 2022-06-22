@@ -250,8 +250,7 @@ jail_cleanup()
 
 jail_audit()
 {
-	if [ -z "$2" ];
-	then
+	if [ -z "$1" ]; then
 		echo -e "$(hostname)\n\t$(pkg audit)\n"
 		_get_running_jails
 		for _j in $RUNNING_JAILS;
@@ -264,16 +263,15 @@ jail_audit()
 			fi
 		done
 	else
-		echo "pkg audit for jail $2"
-		pkg --jail "$2" audit -F
+		echo "pkg audit for jail $1"
+		pkg --jail "$1" audit -F
 		echo ""
 	fi
 }
 
 jail_send()
 {
-	if [ -z "$2" ];
-	then
+	if [ -z "$2" ]; then
 		echo "usage: jailmanage [jail name] [target host]"
 		exit
 	fi
@@ -321,10 +319,7 @@ check_base()
 check_sudo()
 {
 	local _uid; _uid=$(whoami)
-	if [ "$_uid" = 'root' ];
-	then
-		return
-	fi
+	if [ "$_uid" = 'root' ]; then return; fi
 	echo "running as $_uid, using sudo"
 
 	if [ -x "/usr/local/bin/sudo" ];
