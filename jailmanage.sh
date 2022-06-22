@@ -301,11 +301,11 @@ jail_send()
 		service jail start "$1"
 	fi
 
-  echo "zfs send snapshot: $JAIL_SNAP"
-  # shellcheck disable=SC2029
-  zfs send "$JAIL_SNAP" | ssh "$2" zfs receive "$JAIL_SNAP"
-  # shellcheck disable=SC2029
-  zfs send "$DATA_SNAP" | ssh "$2" zfs receive "$DATA_SNAP"
+	echo "zfs send snapshot: $JAIL_SNAP"
+	# shellcheck disable=SC2029
+	zfs send "$JAIL_SNAP" | ssh "$2" zfs receive "$JAIL_SNAP"
+	# shellcheck disable=SC2029
+	zfs send "$DATA_SNAP" | ssh "$2" zfs receive "$DATA_SNAP"
 }
 
 check_base()
