@@ -46,7 +46,7 @@ selfupgrade()
 fix_jailname()
 {
 	# renames chars - and . chars to _
-	# shellcheck disable=SC3060
+	# shellcheck disable=SC2001,SC3060
 	echo "$1" | sed -e 's/\-\./_/g'
 }
 
