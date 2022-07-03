@@ -47,7 +47,7 @@ fix_jailname()
 {
 	# renames chars - and . chars to _
 	# shellcheck disable=SC3060
-	echo "${1//[\-\.]/_}"
+	echo "$1" | sed -e 's/\-\./_/g'
 }
 
 jail_manage()
@@ -67,7 +67,7 @@ jail_manage()
 		_jexec="/usr/sbin/jexec $(fix_jailname "$_jail")"
 	fi
 
-	local _jail_fixed; _jail_fixed=$(fix_jailname "$1")
+	local _jail_fixed; _jail_fixed=$(fix_jailname "$_jail")
 	local _jail_root_path; _jail_root_path=$(jail_root_path "$_jail_fixed")
 
 	if [ ! -d "$_jail_root_path" ]; then
@@ -175,17 +175,19 @@ check_tripwire()
 
 jail_update()
 {
-	if [ -z "$1" ]; then
+	local _jail="$1"
+
+	if [ -z "$_jail" ]; then
 		echo " didn't receive the jail name!" && echo
 		return
 	fi
 
-	local _jail_fixed; _jail_fixed=$(fix_jailname "$1")
+	local _jail_fixed; _jail_fixed=$(fix_jailname "$_jail")
 	local _jail_root_path; _jail_root_path=$(jail_root_path "$_jail_fixed")
 	local _jexec="/usr/sbin/jexec $_jail_id"
 
 	if [ ! -d "$_jail_root_path" ]; then
-		echo "skipping $1, non-existent $_jail_root_path root path"
+		echo "skipping $_jail, non-existent $_jail_root_path root path"
 		return
 	fi
 
@@ -204,7 +206,7 @@ jail_update()
 		local HOST_VER JAIL_VER
 		HOST_VER=$(/bin/freebsd-version)
 		JAIL_VER=$("$_jail_root_path/bin/freebsd-version")
-		echo "   jail $1 at version $JAIL_VER"
+		echo "   jail $_jail at version $JAIL_VER"
 
 		if [ "$HOST_VER" = "$JAIL_VER" ];
 		then
@@ -224,7 +226,7 @@ jail_update()
 		fi
 	fi
 
-	echo "   done with $1"
+	echo "   done with $_jail"
 }
 
 jail_cleanup()
