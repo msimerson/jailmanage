@@ -1,10 +1,10 @@
 #!/bin/sh
 #
-# VERSION: 2022-06-21
+# VERSION: 2023-04-23
 #
 # by Matt Simerson
 # Source: https://github.com/msimerson/jailmanage
-# INSTALL or upgrade, copy/paste the commands in selfupgrade()
+# to INSTALL or upgrade, copy/paste the commands in selfupgrade()
 
 # configurable settings
 ALL_JAILS=''
@@ -21,9 +21,10 @@ usage() {
 	echo " "
 	echo " all         - consecutively log into each jail"
 	echo " audit       - run 'pkg audit' in each jail"
+	echo " vulnerable  - drop into each jail with vulnerable packages"
 	echo " versions    - report versions of each jail"
 	echo " update      - run freebsd-update in each jail"
-	echo " cleanup     - purge pkg and freebsd-update caches"
+	echo " clean       - purge pkg and freebsd-update caches"
 	echo " send        - ship a jail between hosts"
 	echo " mergemaster - run mergemaster in each jail"
 	echo " selfupgrade - upgrade jailmanage script"
@@ -273,6 +274,22 @@ jail_audit()
 	fi
 }
 
+jail_vulnerable()
+{
+	_get_running_jails
+	for _j in $RUNNING_JAILS;
+	do
+		_r=$(pkg --jail "$_j" audit)
+		# shellcheck disable=SC2181
+		if [ $? -ne 0 ]; then
+			echo -e "    jail ${_j}"
+			echo -e ""
+			pkg --jail "$_j" audit
+			jexec ${_j}
+		fi
+	done
+}
+
 jail_send()
 {
 	if [ -z "$2" ]; then
@@ -485,6 +502,9 @@ case "$1" in
 	"audit"   )
 		jail_audit "$2"
 	;;
+	"vulnerable"   )
+		jail_vulnerable
+	;;
 	"update"   )
 		if [ -z "$2" ];
 		then
@@ -509,7 +529,7 @@ case "$1" in
 	"selfupgrade"   )
 		selfupgrade
 	;;
-	"cleanup"   )
+	"clean" | "cleanup"   )
 		_get_all_jails
 		for _j in $ALL_JAILS;
 		do
