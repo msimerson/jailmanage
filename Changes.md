@@ -1,6 +1,14 @@
 ## Changes
 
 
+### 2023-05-07
+
+- added vulnerable
+- mm: moved iterater info fn (was in switch/case)
+- cleanup: move iterator info fn (was in switch)
+- cleanup: use pkg --jail $name clean (was rm)
+
+
 ### 2022-06-21
 
 - add send

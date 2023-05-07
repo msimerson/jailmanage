@@ -112,20 +112,21 @@ EO_PKG_CONF
 
 jail_mergemaster()
 {
-	if [ -z "$1" ]; then
-		echo " didn't receive the jail name!" && echo
-		return
-	fi
+	_get_all_jails
+	for _j in $ALL_JAILS;
+	do
+		echo "Doing mergemaster for jail $_j"
 
-	local _jail_root_path;
-	_jail_root_path=$(jail_root_path "$(fix_jailname "$1")")
+		local _jail_root_path;
+		_jail_root_path=$(jail_root_path "$(fix_jailname "$_j")")
 
-	local CMD="mergemaster -FU -D $_jail_root_path"
-	echo "$SUDO $CMD"
-	sleep 2
-	$SUDO $CMD
+		local CMD="mergemaster -FU -D $_jail_root_path"
+		echo "$SUDO $CMD"
+		sleep 2
+		$SUDO $CMD
 
-	echo "all done with $1!"
+		echo "done."
+	done
 }
 
 check_tripwire()
@@ -233,23 +234,31 @@ jail_update()
 jail_cleanup()
 {
 	if [ -z "$1" ]; then
-		echo " didn't receive the jail name!" && echo
-		return
+		_get_all_jails
+	else
+		ALL_JAILS="$1"
 	fi
 
-	local _jail_root_path;
-	_jail_root_path=$(jail_root_path "$(fix_jailname "$1")")
-
-	DIRS="/var/cache/pkg /var/db/freebsd-update"
-	for dir in $DIRS
+	for _j in $ALL_JAILS;
 	do
-		local CMD="rm -rf $_jailpath$dir/*"
-		echo "	$SUDO $CMD"
-		sleep 1
-		$SUDO $CMD
-	done
+		echo "Cleaning jail $_j"
+		echo "    $SUDO pkg --jail $_j clean -yaq"
+		$SUDO pkg --jail $_j clean -yaq
 
-	echo "    done with $1!"
+		local _jail_root_path;
+		_jail_root_path=$(jail_root_path "$(fix_jailname "$1")")
+
+		DIRS="/var/db/freebsd-update"
+		for dir in $DIRS
+		do
+			local CMD="rm -rf $_jailpath$dir/*"
+			echo "    $SUDO $CMD"
+			sleep 1
+			$SUDO $CMD
+		done
+
+		echo "        done."
+	done
 }
 
 jail_audit()
@@ -526,24 +535,14 @@ case "$1" in
 	"send"   )
 		jail_send "$2" "$3"
 	;;
-	"selfupgrade"   )
+	"selfupgrade" | "selfupdate"  )
 		selfupgrade
 	;;
 	"clean" | "cleanup"   )
-		_get_all_jails
-		for _j in $ALL_JAILS;
-		do
-			echo "Doing cleanup for jail $_j"
-			jail_cleanup "$_j"
-		done
+		jail_cleanup "$2"
 	;;
 	"mergemaster"   )
-		_get_all_jails
-		for _j in $ALL_JAILS;
-		do
-			echo "Doing mergemaster for jail $_j"
-			jail_mergemaster "$_j"
-		done
+		jail_mergemaster
 	;;
 	*)
 		echo "Entering jail $1"
