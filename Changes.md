@@ -1,5 +1,9 @@
 ## Changes
 
+### 2023-06-17
+
+- add support for jail configs in /etc/jail.conf.d
+
 
 ### 2023-05-07
 

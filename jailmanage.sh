@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# VERSION: 2023-04-23
+# VERSION: 2023-06-17
 #
 # by Matt Simerson
 # Source: https://github.com/msimerson/jailmanage
@@ -362,16 +362,21 @@ jail_root_path()
 {
 	local _jailpath
 
-	# look for a path declaration in jails declaration block
-	_jailpath=$(grep -A10 "^$1" /etc/jail.conf \
-		| awk '{if ($0 ~ /{/) {found=1;} if (found) {print; if ($0 ~ /}/) { exit;}}}' \
-		| grep -E '^[[:space:]]*path' \
-		| cut -f2 -d= | cut -f2 -d'"')
+	# find path declaration in jail config
+	if [ -f "/etc/jail.conf.d/$1.conf" ]; then
+		_jailpath=$(grep -E '^[[:space:]]*path' /etc/jail.conf.d/$1.conf \
+			| cut -f2 -d= | cut -f2 -d'"' \
+			| sed "s/\$name/$1/")
+	else
+		_jailpath=$(grep -A10 "^$1" /etc/jail.conf \
+			| awk '{if ($0 ~ /{/) {found=1;} if (found) {print; if ($0 ~ /}/) { exit;}}}' \
+			| grep -E '^[[:space:]]*path' \
+			| cut -f2 -d= | cut -f2 -d'"')
+	fi
 
 	# no declaration, use default
 	if [ -z "$_jailpath" ]; then
-		echo "$ZFS_JAIL_MNT/$1"
-		return
+		_jailpath="$ZFS_JAIL_MNT/$1"
 	fi
 
 	echo "$_jailpath"
