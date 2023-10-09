@@ -1,5 +1,11 @@
 ## Changes
 
+### 2023-10-09
+
+- get_all_jails: add /etc/jail.conf.d support
+- jail_root_path: add /etc/jail.conf.d support
+
+
 ### 2023-06-17
 
 - add support for jail configs in /etc/jail.conf.d
