@@ -375,6 +375,11 @@ jail_root_path()
 			| cut -f2 -d= | cut -f2 -d'"')
 	fi
 
+	if [ -n "$_jailpath" ]; then
+		# expand $name parameter (variable)
+		_jailpath=$(echo "$_jailpath" | sed -e "s|\$name|$1|" )
+	fi
+
 	# no explicit declaration, use default
 	if [ -z "$_jailpath" ]; then
 		_jailpath="$ZFS_JAIL_MNT/$1"
