@@ -376,7 +376,7 @@ jail_root_path()
 	fi
 
 	if [ -n "$_jailpath" ]; then
-		# expand $name parameter (variable)
+		# shellcheck disable=SC2001
 		_jailpath=$(echo "$_jailpath" | sed -e "s|\$name|$1|" )
 	fi
 
