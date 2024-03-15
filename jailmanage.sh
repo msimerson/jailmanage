@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# VERSION: 2023-10-09
+# VERSION: 2023-12-03
 #
 # by Matt Simerson
 # Source: https://github.com/msimerson/jailmanage
@@ -12,7 +12,7 @@ RUNNING_JAILS=''
 SUDO=''
 ZFS_VOL="zroot"
 ZFS_DATA_MNT="/data"
-ZFS_JAIL_MNT="/jails"
+ZFS_JAIL_MNT=${ZFS_JAIL_MNT:="/jails"}
 
 usage() {
 	echo "   usage: $0 [ jailname ]"
@@ -29,18 +29,15 @@ usage() {
 	echo " mergemaster - run mergemaster in each jail"
 	echo " selfupgrade - upgrade jailmanage script"
 	echo " "
-	exit
+	exit 1
 }
 
-if [ -z "$1" ];
-then
-	usage
-fi
+if [ -z "$1" ]; then usage; fi
 
 selfupgrade()
 {
-	export _jm=/usr/local/bin/jailmanage
-	export _jmurl=https://raw.githubusercontent.com/msimerson/jailmanage/master/jailmanage.sh
+	local _jm=/usr/local/bin/jailmanage
+	local _jmurl=https://raw.githubusercontent.com/msimerson/jailmanage/master/jailmanage.sh
 	fetch -o $_jm -m $_jmurl && chmod 755 $_jm
 }
 
@@ -79,15 +76,6 @@ jail_manage()
 	_mount_ports "$_jail_fixed" "$_jail_root_path"
 	local _i_mounted=$?
 	_mount_pkg_cache "$_jail_fixed" "$_jail_root_path"
-
-	if [ ! -f "$_jail_root_path/usr/local/etc/pkg/repos/FreeBSD.conf" ]; then
-		$SUDO mkdir -p "$_jail_root_path/usr/local/etc/pkg/repos" || exit
-		$SUDO tee "$_jail_root_path/usr/local/etc/pkg/repos/FreeBSD.conf" <<EO_PKG_CONF
-FreeBSD: {
-  url: "pkg+http://pkg.FreeBSD.org/\${ABI}/latest"
-}
-EO_PKG_CONF
-	fi
 
 	local _pkg_dir="$_jail_root_path/var/db/pkg"
 	if [ -f "$_pkg_dir/local.sqlite" ]; then
@@ -367,7 +355,7 @@ jail_root_path()
 		_jailpath=$(grep -E '^[[:space:]]*path' "/etc/jail.conf.d/$1.conf" | cut -f2 -d= | cut -f2 -d'"')
 	fi
 
-	if [ -z "$_jailpath" ]; then
+	if [ -z "$_jailpath" ] && [ -f /etc/jail.conf ]; then
 		# look for a path declaration in jail.conf declaration block
 		_jailpath=$(grep -A10 "^$1" /etc/jail.conf \
 			| awk '{if ($0 ~ /{/) {found=1;} if (found) {print; if ($0 ~ /}/) { exit;}}}' \
@@ -518,8 +506,10 @@ _version_report()
 	echo -e "$VERSION_REPORT" | column -t
 }
 
-check_base
-check_sudo
+if [ "$1" != "test" ] && [ "$1" != "" ]; then
+	check_base
+	check_sudo
+fi
 
 case "$1" in
 	"all"   )
@@ -567,10 +557,11 @@ case "$1" in
 	"mergemaster"   )
 		jail_mergemaster
 	;;
+	"test" )
+		# echo "doing test"
+	;;
 	*)
 		echo "Entering jail $1"
 		jail_manage "$1"
 	;;
 esac
-
-exit
