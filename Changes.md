@@ -1,5 +1,11 @@
 ## Changes
 
+### 2023-12-03
+
+- check for ZFS_JAIL_MNT
+- add test/bats
+
+
 ### 2023-10-09
 
 - get_all_jails: add /etc/jail.conf.d support
