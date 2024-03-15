@@ -15,6 +15,13 @@ jobs:
         SHELLCHECK_OPTS: -s bash -e SC1004,SC1091,SC2009,SC2016,SC2039,SC2086,SC2119,SC2153
     - name: shellcheck
       run: shellcheck jailmanage.sh
+
+  bats:
+    name: Bats
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4
     - name: Setup Bats
       uses: bats-core/bats-action@1.5.4
     - name: bats test
