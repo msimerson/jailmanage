@@ -355,7 +355,7 @@ jail_root_path()
 		_jailpath=$(grep -E '^[[:space:]]*path' "/etc/jail.conf.d/$1.conf" | cut -f2 -d= | cut -f2 -d'"')
 	fi
 
-	if [ -z "$_jailpath" ]; then
+	if [ -z "$_jailpath" ] && [ -f /etc/jail.conf ]; then
 		# look for a path declaration in jail.conf declaration block
 		_jailpath=$(grep -A10 "^$1" /etc/jail.conf \
 			| awk '{if ($0 ~ /{/) {found=1;} if (found) {print; if ($0 ~ /}/) { exit;}}}' \
@@ -558,11 +558,10 @@ case "$1" in
 		jail_mergemaster
 	;;
 	"test" )
+		# echo "doing test"
 	;;
 	*)
 		echo "Entering jail $1"
 		jail_manage "$1"
 	;;
 esac
-
-exit
