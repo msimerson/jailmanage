@@ -321,7 +321,8 @@ jail_send()
 		fi
 	done
 
-	local TODAY=$(date +%Y-%m-%d)
+	local TODAY
+	TODAY=$(date +%Y-%m-%d)
 
 	echo "checking for local snapshots"
 	for _m in $MOUNTS; do
@@ -344,8 +345,11 @@ jail_send()
 
 	echo "sending filesystems to $_dest_host"
 	for _m in $MOUNTS; do
-		local _local_snap="$(zfs get -H -o name mountpoint $_m)@$TODAY"
-		local _remote_snap=$(ssh "$_dest_host" -- "zfs get -H -o name mountpoint $_m")
+		local _local_snap
+		local _remote_snap
+
+		_local_snap="$(zfs get -H -o name mountpoint $_m)@$TODAY"
+		_remote_snap=$(ssh "$_dest_host" -- "zfs get -H -o name mountpoint $_m")
 
 		echo "  zfs send $_local_snap | ssh $_dest_host zfs receive $_remote_snap/$_jail_name"
 		# shellcheck disable=SC2029
