@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# VERSION: 2023-12-03
+# VERSION: 2024-09-28
 #
 # by Matt Simerson
 # Source: https://github.com/msimerson/jailmanage
@@ -10,7 +10,6 @@
 ALL_JAILS=''
 RUNNING_JAILS=''
 SUDO=''
-ZFS_VOL="zroot"
 ZFS_DATA_MNT="/data"
 ZFS_JAIL_MNT=${ZFS_JAIL_MNT:="/jails"}
 
@@ -289,41 +288,72 @@ jail_vulnerable()
 
 jail_send()
 {
-	if [ -z "$2" ]; then
-		echo "usage: jailmanage [jail name] [target host]"
+	local _jail_name="$1"
+	local _dest_host="$2"
+	local _jail_too="$3"  # default is DATA FS only
+
+	local _snap
+	local _match
+
+	if [ -z "$_dest_host" ]; then
+		echo "usage: jailmanage send [jail name] [dest host] [dest ZVOL] [JAIL TOO]"
 		exit
 	fi
 
-	echo " ***  send jail $1 to $2  ***"
-
-	TODAY=$(date +%Y-%m-%d)
-	JAIL_SNAP="${ZFS_VOL}${ZFS_JAIL_MNT}/${1}@${TODAY}"
-	DATA_SNAP="${ZFS_VOL}${ZFS_DATA_MNT}/${1}@${TODAY}"
-
-	# see if remote snapshot exists
-	_match=$(ssh "$2" zfs list -t snapshot | grep "$JAIL_SNAP")
-	if [ -n "$_match" ]; then
-		echo "remote snapshot exists: $JAIL_SNAP"
+	if [ ! -f "/etc/jail.conf.d/${_jail_name}.conf" ]; then
+		echo "ERR: missing /etc/jail.conf.d/${_jail_name}.conf"
 		exit
 	fi
 
-	_match=$(zfs list -t snapshot | grep "$JAIL_SNAP")
-	if [ -n "$_match" ]; then
-		echo "local snapshot exists: $JAIL_SNAP"
-	else
-		echo "creating local snapshot: $JAIL_SNAP"
-		service jail stop "$1"
-		sleep 1
-		zfs snapshot "$JAIL_SNAP"
-		zfs snapshot "$DATA_SNAP"
-		service jail start "$1"
+	local MOUNTS="$ZFS_DATA_MNT/$_jail_name"
+	if [ -n "$_jail_too" ]; then
+		MOUNTS="$MOUNTS $ZFS_JAIL_MNT/$_jail_name"
 	fi
 
-	echo "zfs send snapshot: $JAIL_SNAP"
-	# shellcheck disable=SC2029
-	zfs send "$JAIL_SNAP" | ssh "$2" zfs receive "$JAIL_SNAP"
-	# shellcheck disable=SC2029
-	zfs send "$DATA_SNAP" | ssh "$2" zfs receive "$DATA_SNAP"
+	echo "checking for remote FS"
+
+	for _m in $MOUNTS; do
+		echo "  ssh $_dest_host zfs get -H -o name mountpoint $_m"
+		_match=$(ssh "$_dest_host" -- "zfs get -H -o name mountpoint $_m")
+		if echo "$_match" | grep -q $_jail_name; then
+			echo "remote FS exists: $_match"
+			exit
+		fi
+	done
+
+	local TODAY=$(date +%Y-%m-%d)
+
+	echo "checking for local snapshots"
+	for _m in $MOUNTS; do
+		_snap=$(zfs get -H -o name mountpoint $_m)
+
+		echo "  zfs list -t snapshot | grep $_snap@$TODAY"
+		_match=$(zfs list -t snapshot | grep "$_snap@$TODAY")
+
+		if [ -n "$_match" ]; then
+			echo "local snapshot exists: $_snap"
+		else
+			echo "creating local snapshot"
+			service jail stop "$_jail_name"
+			sleep 1
+			echo "  zfs snapshot $_snap@$TODAY"
+			zfs snapshot "$_snap@$TODAY"
+			service jail start "$_jail_name"
+		fi
+	done
+
+	echo "sending filesystems to $_dest_host"
+	for _m in $MOUNTS; do
+		local _local_snap="$(zfs get -H -o name mountpoint $_m)@$TODAY"
+		local _remote_snap=$(ssh "$_dest_host" -- "zfs get -H -o name mountpoint $_m")
+
+		echo "  zfs send $_local_snap | ssh $_dest_host zfs receive $_remote_snap/$_jail_name"
+		# shellcheck disable=SC2029
+		zfs send "$_local_snap" | ssh "$_dest_host" zfs receive "$_remote_snap/$_jail_name"
+	done
+
+	echo "scp /etc/jail.conf.d/$_jail_name.conf $_dest_host:/etc/jail.conf.d/"
+	scp "/etc/jail.conf.d/$_jail_name.conf" "$_dest_host:/etc/jail.conf.d/"
 }
 
 check_base()
@@ -546,7 +576,7 @@ case "$1" in
 		_version_report
 	;;
 	"send"   )
-		jail_send "$2" "$3"
+		jail_send "$2" "$3" "$4" "$5"
 	;;
 	"selfupgrade" | "selfupdate"  )
 		selfupgrade
