@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# VERSION: 2024-09-28
+echo "VERSION: 2024-10-10"; echo
 #
 # by Matt Simerson
 # Source: https://github.com/msimerson/jailmanage
@@ -47,6 +47,11 @@ fix_jailname()
 	echo "$1" | sed -e 's/\-\./_/g'
 }
 
+jail_is_running()
+{
+        jls -d -j $1 name 2>/dev/null | grep -q $1
+}
+
 jail_manage()
 {
 	local _jail="$1"
@@ -57,14 +62,14 @@ jail_manage()
 	fi
 
 	local _jexec
-	if [ -f "/etc/jail.conf" ];
-	then
+	local _jail_fixed; _jail_fixed=$(fix_jailname "$_jail")
+
+	if [ -f "/etc/jail.conf" ]; then
 		_jexec="/usr/sbin/jexec $_jail"
 	else
-		_jexec="/usr/sbin/jexec $(fix_jailname "$_jail")"
+		_jexec="/usr/sbin/jexec $_jail_fixed)"
 	fi
 
-	local _jail_fixed; _jail_fixed=$(fix_jailname "$_jail")
 	local _jail_root_path; _jail_root_path=$(jail_root_path "$_jail_fixed")
 
 	if [ ! -d "$_jail_root_path" ]; then
@@ -290,12 +295,13 @@ jail_send()
 {
 	local _jail_name="$1"
 	local _dest_host="$2"
-	local _jail_too="$3"  # default is DATA FS only
+	local _dest_zroot="$3"
+	local _jail_too="$4"  # default is DATA FS only
 
 	local _snap
 	local _match
 
-	if [ -z "$_dest_host" ]; then
+	if [ -z "$_dest_zroot" ]; then
 		echo "usage: jailmanage send [jail name] [dest host] [dest ZVOL] [JAIL TOO]"
 		exit
 	fi
@@ -324,6 +330,9 @@ jail_send()
 	local TODAY
 	TODAY=$(date +%Y-%m-%d)
 
+	jail_is_running "$_jail_name"
+	_was_running=$?
+
 	echo "checking for local snapshots"
 	for _m in $MOUNTS; do
 		_snap=$(zfs get -H -o name mountpoint $_m)
@@ -335,13 +344,18 @@ jail_send()
 			echo "local snapshot exists: $_snap"
 		else
 			echo "creating local snapshot"
-			service jail stop "$_jail_name"
+			if jail_is_running "$_jail_name"; then
+				service jail stop "$_jail_name"
+			fi
 			sleep 1
 			echo "  zfs snapshot $_snap@$TODAY"
 			zfs snapshot "$_snap@$TODAY"
-			service jail start "$_jail_name"
 		fi
 	done
+
+	if [ "$_was_running" == "1" ]; then
+		service jail start "$_jail_name"
+	fi
 
 	echo "sending filesystems to $_dest_host"
 	for _m in $MOUNTS; do
@@ -349,7 +363,7 @@ jail_send()
 		local _remote_snap
 
 		_local_snap="$(zfs get -H -o name mountpoint $_m)@$TODAY"
-		_remote_snap=$(ssh "$_dest_host" -- "zfs get -H -o name mountpoint $_m")
+		_remote_snap=$(ssh "$_dest_host" -- "zfs get -H -o name mountpoint $_dest_zroot/$_m")
 
 		echo "  zfs send $_local_snap | ssh $_dest_host zfs receive $_remote_snap/$_jail_name"
 		# shellcheck disable=SC2029
