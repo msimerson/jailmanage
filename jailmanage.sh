@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-echo "VERSION: 2024-10-10"; echo
+echo "VERSION: 2026-01-30"; echo
 #
 # by Matt Simerson
 # Source: https://github.com/msimerson/jailmanage
@@ -12,6 +12,7 @@ RUNNING_JAILS=''
 SUDO=''
 ZFS_DATA_MNT="/data"
 ZFS_JAIL_MNT=${ZFS_JAIL_MNT:="/jails"}
+ZFS_VOL="zroot"
 
 usage() {
 	echo "   usage: $0 [ jailname ]"
@@ -286,7 +287,7 @@ jail_vulnerable()
 			echo -e "    jail ${_j}"
 			echo -e ""
 			pkg --jail "$_j" audit
-			jexec ${_j}
+			/usr/sbin/jexec ${_j} su -
 		fi
 	done
 }
