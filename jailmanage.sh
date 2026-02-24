@@ -68,7 +68,7 @@ jail_manage()
 	if [ -f "/etc/jail.conf" ]; then
 		_jexec="/usr/sbin/jexec $_jail"
 	else
-		_jexec="/usr/sbin/jexec $_jail_fixed)"
+		_jexec="/usr/sbin/jexec $_jail_fixed"
 	fi
 
 	local _jail_root_path; _jail_root_path=$(jail_root_path "$_jail_fixed")
