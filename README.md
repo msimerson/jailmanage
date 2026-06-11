@@ -44,7 +44,7 @@ jailmanage all
 
 ```sh
 ➜ jailmanage versions  
-VERSION: 2026-06-10
+v: 2026-06-10
 
 host.****.net       15.0-RELEASE-p10
 --------------      ---------------
@@ -85,10 +85,8 @@ Runs `pkg audit` against the host and every jail, reporting packages with
 known vulnerabilities.
 
 ```sh
-jailmanage audit
-
 ➜ jailmanage audit   
-VERSION: 2026-06-10
+v: 2026-06-10
 
 ⚠️    host.****.net
 	python311-3.11.15_2

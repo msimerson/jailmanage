@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-echo "VERSION: 2026-06-10"; echo
+echo "v: 2026-06-10"; echo
 #
 # by Matt Simerson
 # Source: https://github.com/msimerson/jailmanage
