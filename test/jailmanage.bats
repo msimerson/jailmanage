@@ -11,7 +11,7 @@
 
 @test "test arg prints version banner" {
   run ./jailmanage.sh test
-  [[ "${lines[0]}" == VERSION:* ]]
+  [[ "${lines[0]}" == v:* ]]
 }
 
 @test "no arg prompts for usage" {

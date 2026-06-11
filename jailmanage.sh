@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-echo "VERSION: 2026-06-10"; echo
+echo "v: 2026-06-10"; echo
 #
 # by Matt Simerson
 # Source: https://github.com/msimerson/jailmanage
@@ -232,7 +232,7 @@ jail_cleanup()
 
 		_jrpath=$(jail_root_path "$(fix_jailname "$_j")")
 
-		DIRS="/var/db/freebsd-update"
+		DIRS="/var/db/freebsd-update /var/cache/pkg"
 		for dir in $DIRS
 		do
 			local CMD="rm -rf $_jrpath$dir/*"
