@@ -1,21 +1,26 @@
 ## Changes
 
+### 2026-06-10
+
+- send: improved; restart jail if it was stopped
+- emoji summaries
+- refactor out jail_audit_one
+- refactor out jail_update_one
+- jail_root_path: take jail name, fall back to fixed name
+
 ### 2023-12-03
 
 - check for ZFS_JAIL_MNT
 - add test/bats
-
 
 ### 2023-10-09
 
 - get_all_jails: add /etc/jail.conf.d support
 - jail_root_path: add /etc/jail.conf.d support
 
-
 ### 2023-06-17
 
 - add support for jail configs in /etc/jail.conf.d
-
 
 ### 2023-05-07
 
@@ -24,11 +29,9 @@
 - cleanup: move iterator info fn (was in switch)
 - cleanup: use pkg --jail $name clean (was rm)
 
-
 ### 2022-06-21
 
 - add send
-
 
 ### 2021-11-01
 
@@ -37,26 +40,21 @@
 - \_get_all_jails: skip jails where dir doesn't exist
 - audit: only check running jails
 
-
 ### 2021-04-22
 
 - added audit
-
 
 ### 2020-02-11
 
 - added versions (by @Infern1)
 
-
 ### 2019-11-07
 
 - added selfupdate()
 
-
 ### 2018-01-19
 
 - fix quoting for 'jailmanage update'
-
 
 ### 2017-02-27
 

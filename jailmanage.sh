@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-echo "VERSION: 2026-01-30"; echo
+echo "VERSION: 2026-06-10"; echo
 #
 # by Matt Simerson
 # Source: https://github.com/msimerson/jailmanage
@@ -12,7 +12,6 @@ RUNNING_JAILS=''
 SUDO=''
 ZFS_DATA_MNT="/data"
 ZFS_JAIL_MNT=${ZFS_JAIL_MNT:="/jails"}
-ZFS_VOL="zroot"
 
 usage() {
 	echo "   usage: $0 [ jailname ]"
@@ -43,14 +42,14 @@ selfupgrade()
 
 fix_jailname()
 {
-	# renames chars - and . chars to _
+	# renames - and . chars to _
 	# shellcheck disable=SC2001,SC3060
-	echo "$1" | sed -e 's/\-\./_/g'
+	echo "$1" | sed -e 's/[-.]/_/g'
 }
 
 jail_is_running()
 {
-        jls -d -j $1 name 2>/dev/null | grep -q $1
+	jls -d -j $1 name 2>/dev/null | grep -q $1
 }
 
 jail_manage()
@@ -58,49 +57,37 @@ jail_manage()
 	local _jail="$1"
 
 	if [ -z "$_jail" ]; then
-		echo " didn't receive the jail name!" && echo
+		echo " didn't receive a jail name!" && echo
 		return
 	fi
 
-	local _jexec
+	local _jexec="/usr/sbin/jexec $_jail"
 	local _jail_fixed; _jail_fixed=$(fix_jailname "$_jail")
 
-	if [ -f "/etc/jail.conf" ]; then
-		_jexec="/usr/sbin/jexec $_jail"
-	else
-		_jexec="/usr/sbin/jexec $_jail_fixed"
-	fi
-
-	local _jail_root_path; _jail_root_path=$(jail_root_path "$_jail_fixed")
-
-	if [ ! -d "$_jail_root_path" ]; then
-		echo "skipping $_jail, non-existent $_jail_root_path root path"
+	local _jrpath; _jrpath=$(jail_root_path "$_jail")
+	if [ ! -d "$_jrpath" ]; then
+		echo "skipping $_jail, non-existent root path: $_jrpath"
 		return
 	fi
 
-	_mount_ports "$_jail_fixed" "$_jail_root_path"
-	local _i_mounted=$?
-	_mount_pkg_cache "$_jail_fixed" "$_jail_root_path"
+	echo "Entering jail $_jail"
 
-	local _pkg_dir="$_jail_root_path/var/db/pkg"
-	if [ -f "$_pkg_dir/local.sqlite" ]; then
-		if [ ! -f "$_pkg_dir/vuln.xml" ]; then
-			$SUDO $_jexec pkg audit -F
-		else
-			$SUDO $_jexec pkg audit
-		fi
-	fi
-	$SUDO $_jexec su -
+	_mount_ports "$_jail_fixed" "$_jrpath"
+	local _i_mounted=$?
+	_mount_pkg_cache "$_jail_fixed" "$_jrpath"
+
+	jail_audit_one "$_jail"
+	$SUDO /usr/sbin/jexec "$_jail_fixed" su -
 
 	echo "all done!"
 
 	if [ "$_i_mounted" -eq 1 ]; then
-		_unmount_ports "$_jail_root_path"
+		_unmount_ports "$_jrpath"
 	fi
 
-	_unmount_pkg_cache "$_jail_root_path"
+	_unmount_pkg_cache "$_jrpath"
 
-	check_tripwire "$_jail" "$_jail_root_path"
+	check_tripwire "$_jail" "$_jrpath"
 }
 
 jail_mergemaster()
@@ -110,16 +97,23 @@ jail_mergemaster()
 	do
 		echo "Doing mergemaster for jail $_j"
 
-		local _jail_root_path;
-		_jail_root_path=$(jail_root_path "$(fix_jailname "$_j")")
+		local _jrpath; _jrpath=$(jail_root_path "$(fix_jailname "$_j")")
 
-		local CMD="mergemaster -FU -D $_jail_root_path"
+		local CMD="mergemaster -FU -D $_jrpath"
 		echo "$SUDO $CMD"
 		sleep 2
 		$SUDO $CMD
 
 		echo "done."
 	done
+}
+
+_get_jexec()
+{
+	local _jail="$1"
+	local _safe; _safe=$(fix_jailname "$_jail")
+	local _jail_id; _jail_id=$(/usr/bin/head -n1 "/var/run/jail_${_safe}.id")
+	echo "/usr/sbin/jexec $_jail_id"
 }
 
 check_tripwire()
@@ -154,10 +148,6 @@ check_tripwire()
 	fi
 
 	# run the tripwire check script
-	local _pid="/var/run/jail_${_jail}.id"
-	local _jail_id; _jail_id=$(/usr/bin/head -n1 "$_pid")
-	local _jexec="/usr/sbin/jexec $_jail_id"
-
 	echo "$SUDO $_jexec /usr/local/sbin/tripwire -m c"
 	$SUDO $_jexec /usr/local/sbin/tripwire -m c
 
@@ -168,7 +158,7 @@ check_tripwire()
 		"$_jaildir/var/db/tripwire/report/$_last_report"
 }
 
-jail_update()
+jail_update_one()
 {
 	local _jail="$1"
 
@@ -177,21 +167,21 @@ jail_update()
 		return
 	fi
 
-	local _jail_fixed; _jail_fixed=$(fix_jailname "$_jail")
-	local _jail_root_path; _jail_root_path=$(jail_root_path "$_jail_fixed")
-	local _jexec="/usr/sbin/jexec $_jail_id"
+	local _jrpath; _jrpath=$(jail_root_path "$_jail")
 
-	if [ ! -d "$_jail_root_path" ]; then
-		echo "skipping $_jail, non-existent $_jail_root_path root path"
+	if [ ! -d "$_jrpath" ]; then
+		echo "skipping $_jail, non-existent root path: $_jrpath"
 		return
 	fi
 
+	echo "freebsd-update for jail $_jail"
+
 	local HOST_MAJ_VER JAIL_MAJ_VER
 	HOST_MAJ_VER=$(/bin/freebsd-version | /usr/bin/cut -f1-2 -d'-')
-	JAIL_MAJ_VER=$("$_jail_root_path/bin/freebsd-version" | /usr/bin/cut -f1-2 -d'-')
+	JAIL_MAJ_VER=$("$_jrpath/bin/freebsd-version" | /usr/bin/cut -f1-2 -d'-')
 
-	local _fuconf="$_jail_root_path/etc/freebsd-update.conf"
-	local _update="/usr/sbin/freebsd-update -b $_jail_root_path -f $_fuconf"
+	local _fuconf="$_jrpath/etc/freebsd-update.conf"
+	local _update="/usr/sbin/freebsd-update -b $_jrpath -f $_fuconf"
 
 	if [ "$HOST_MAJ_VER" = "$JAIL_MAJ_VER" ];
 	then
@@ -200,7 +190,7 @@ jail_update()
 	else
 		local HOST_VER JAIL_VER
 		HOST_VER=$(/bin/freebsd-version)
-		JAIL_VER=$("$_jail_root_path/bin/freebsd-version")
+		JAIL_VER=$("$_jrpath/bin/freebsd-version")
 		echo "   jail $_jail at version $JAIL_VER"
 
 		if [ "$HOST_VER" = "$JAIL_VER" ];
@@ -232,19 +222,20 @@ jail_cleanup()
 		ALL_JAILS="$1"
 	fi
 
+	local _jrpath
+
 	for _j in $ALL_JAILS;
 	do
 		echo "Cleaning jail $_j"
 		echo "    $SUDO pkg --jail $_j clean -yaq"
 		$SUDO pkg --jail $_j clean -yaq
 
-		local _jail_root_path;
-		_jail_root_path=$(jail_root_path "$(fix_jailname "$1")")
+		_jrpath=$(jail_root_path "$(fix_jailname "$_j")")
 
 		DIRS="/var/db/freebsd-update"
 		for dir in $DIRS
 		do
-			local CMD="rm -rf $_jailpath$dir/*"
+			local CMD="rm -rf $_jrpath$dir/*"
 			echo "    $SUDO $CMD"
 			sleep 1
 			$SUDO $CMD
@@ -256,23 +247,59 @@ jail_cleanup()
 
 jail_audit()
 {
-	if [ -z "$1" ]; then
-		echo -e "$(hostname)\n\t$(pkg audit)\n"
+	if [ -n "$1" ]; then
+		printf "jail pkg audit: "
+		jail_audit_one "$1"
+		echo
+	else
+		jail_audit_one "$(hostname)" "$SUDO pkg audit -F"
+
 		_get_running_jails
 		for _j in $RUNNING_JAILS;
 		do
-			_r=$(pkg --jail "$_j" audit)
-			# shellcheck disable=SC2181
-			if [ $? -eq 0 ]; then
-				echo -e "  jail ${_j} ok"
-			else
-				echo -e "  jail ${_j} \n\t${_r}"
-			fi
+			jail_audit_one "$_j"
 		done
+		echo
+	fi
+}
+
+jail_audit_one()
+{
+	local _j="$1"
+	local _cmd="$2"
+
+	if [ -z "$_cmd" ]; then
+		_cmd="$SUDO pkg --jail $_j audit -F"
+	fi
+
+	local r; r=$(eval "$_cmd")
+
+	if [ $? -eq 0 ]; then
+		printf "✅   %s\n" "$_j"
+		return 0
 	else
-		echo "pkg audit for jail $1"
-		pkg --jail "$1" audit -F
-		echo ""
+		printf "⚠️    %s\n" "$_j"
+		echo "$r" | grep 'is vulnerable' | sed 's/ is vulnerable://' | sed -E 's/^[[:space:]]*/\t/'
+		return 1
+	fi
+}
+
+jail_update()
+{
+	local _name; _name="$1"
+	if [ -n "$_name" ];
+	then
+		jail_update_one "$_name"
+	else
+		echo "No jail specified, updating all of them."
+		sleep 3
+
+		_get_all_jails
+		for _j in $ALL_JAILS;
+		do
+			jail_update_one "$_j"
+			sleep 2
+		done
 	fi
 }
 
@@ -281,13 +308,11 @@ jail_vulnerable()
 	_get_running_jails
 	for _j in $RUNNING_JAILS;
 	do
-		_r=$(pkg --jail "$_j" audit)
+		_r=$(jail_audit_one "$_j" "$SUDO pkg --jail $_j audit")
 		# shellcheck disable=SC2181
 		if [ $? -ne 0 ]; then
-			echo -e "    jail ${_j}"
-			echo -e ""
-			pkg --jail "$_j" audit
-			/usr/sbin/jexec ${_j} su -
+			printf "    jail %s\n\n%s\n" "$_j" "$_r"
+			$SUDO /usr/sbin/jexec "${_j}" su -
 		fi
 	done
 }
@@ -354,7 +379,7 @@ jail_send()
 		fi
 	done
 
-	if [ "$_was_running" == "1" ]; then
+	if [ "$_was_running" = "1" ]; then
 		service jail start "$_jail_name"
 	fi
 
@@ -397,32 +422,37 @@ check_sudo()
 
 jail_root_path()
 {
-	local _jailpath
+	local _name="$1"
+	local _path
 
-	if [ -f "/etc/jail.conf.d/$1.conf" ]; then
+	if [ -f "/etc/jail.conf.d/${_name}.conf" ]; then
 		# look for a path declaration
-		_jailpath=$(grep -E '^[[:space:]]*path' "/etc/jail.conf.d/$1.conf" | cut -f2 -d= | cut -f2 -d'"')
+		_path=$(grep -E '^[[:space:]]*path' "/etc/jail.conf.d/${_name}.conf" | cut -f2 -d= | cut -f2 -d'"')
 	fi
 
-	if [ -z "$_jailpath" ] && [ -f /etc/jail.conf ]; then
+	if [ -z "$_path" ] && [ -f /etc/jail.conf ]; then
 		# look for a path declaration in jail.conf declaration block
-		_jailpath=$(grep -A10 "^$1" /etc/jail.conf \
+		_path=$(grep -A10 "^$_name" /etc/jail.conf \
 			| awk '{if ($0 ~ /{/) {found=1;} if (found) {print; if ($0 ~ /}/) { exit;}}}' \
 			| grep -E '^[[:space:]]*path' \
 			| cut -f2 -d= | cut -f2 -d'"')
 	fi
 
-	if [ -n "$_jailpath" ]; then
+	if [ -n "$_path" ]; then
 		# shellcheck disable=SC2001
-		_jailpath=$(echo "$_jailpath" | sed -e "s|\$name|$1|" )
+		_path=$(echo "$_path" | head -n1 | sed -e "s|\$name|$_name|" )
 	fi
 
 	# no explicit declaration, use default
-	if [ -z "$_jailpath" ]; then
-		_jailpath="$ZFS_JAIL_MNT/$1"
+	if [ -z "$_path" ]; then
+		_path="$ZFS_JAIL_MNT/$_name"
 	fi
 
-	echo "$_jailpath"
+	if [ ! -d "$_path" ]; then
+		_path="$ZFS_JAIL_MNT/$(fix_jailname "$_name")"
+	fi
+
+	echo "$_path"
 }
 
 _mount_ports()
@@ -542,15 +572,20 @@ _get_running_jails()
 
 _version_report()
 {
-	VERSION_REPORT="$(hostname) $(/bin/freebsd-version -u)\n"
+	local _host_ver; _host_ver=$(/bin/freebsd-version -u)
+	VERSION_REPORT="$(hostname) ${_host_ver}\n"
 	VERSION_REPORT="${VERSION_REPORT}-------------- ---------------\n"
 	_get_running_jails
 	for _j in $RUNNING_JAILS;
 	do
 		JAILSTATUS=$($SUDO /usr/sbin/jexec "${_j}" /bin/freebsd-version -u)
-		if [ "${JAILSTATUS}" != "" ]; then
-			VERSION_REPORT="${VERSION_REPORT}${_j} ${JAILSTATUS}\n"
+		if [ -z "${JAILSTATUS}" ]; then
+			continue
 		fi
+		if [ "${JAILSTATUS}" != "${_host_ver}" ]; then
+			JAILSTATUS="${JAILSTATUS} ⚠️"
+		fi
+		VERSION_REPORT="${VERSION_REPORT}${_j} ${JAILSTATUS}\n"
 	done
 	echo -e "$VERSION_REPORT" | column -t
 }
@@ -561,56 +596,20 @@ if [ "$1" != "test" ] && [ "$1" != "" ]; then
 fi
 
 case "$1" in
-	"all"   )
+	"all")
 		_get_running_jails
 		for _j in $RUNNING_JAILS;
 		do
-			echo "Entering jail $_j"
-			sleep 1
 			jail_manage "$_j"
 		done
 	;;
-	"audit"   )
-		jail_audit "$2"
-	;;
-	"vulnerable"   )
-		jail_vulnerable
-	;;
-	"update"   )
-		if [ -z "$2" ];
-		then
-			_get_all_jails
-			for _j in $ALL_JAILS;
-			do
-				echo "freebsd-update for jail $_j"
-				sleep 2
-				jail_update "$_j"
-			done
-		else
-			echo "freebsd-update for jail $2"
-			jail_update "$2"
-		fi
-	;;
-	"versions"   )
-		_version_report
-	;;
-	"send"   )
-		jail_send "$2" "$3" "$4" "$5"
-	;;
-	"selfupgrade" | "selfupdate"  )
-		selfupgrade
-	;;
-	"clean" | "cleanup"   )
-		jail_cleanup "$2"
-	;;
-	"mergemaster"   )
-		jail_mergemaster
-	;;
-	"test" )
-		# echo "doing test"
-	;;
-	*)
-		echo "Entering jail $1"
-		jail_manage "$1"
-	;;
+	"audit"       ) jail_audit "$2"   ;;
+	"vulnerable"  ) jail_vulnerable   ;;
+	"update"      ) jail_update "$2"  ;;
+	"versions"    ) _version_report   ;;
+	"send"        ) jail_send "$2" "$3" "$4" "$5" ;;
+	"selfupgrade" | "selfupdate" ) selfupgrade ;;
+	"clean" | "cleanup" ) jail_cleanup "$2" ;;
+	"mergemaster" ) jail_mergemaster  ;;
+	*) jail_manage "$1" ;;
 esac
