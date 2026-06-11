@@ -6,6 +6,7 @@ if [ -n "$1" ]; then
 fi
 
 echo "shellcheck *.sh"
-shellcheck *.sh
+shellcheck ./*.sh
+shellcheck test/*.sh
 
 bats test/*.bats

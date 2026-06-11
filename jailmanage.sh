@@ -274,6 +274,7 @@ jail_audit_one()
 
 	local r; r=$(eval "$_cmd")
 
+	# shellcheck disable=SC2181
 	if [ $? -eq 0 ]; then
 		printf "✅   %s\n" "$_j"
 		return 0
