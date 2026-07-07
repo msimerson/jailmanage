@@ -43,18 +43,16 @@ jailmanage all
 ### Report OS version of each jail
 
 ```sh
-➜ jailmanage versions  
+➜ jailmanage versions
 v: 2026-06-10
 
-host.****.net       15.0-RELEASE-p10
+host.****.net       15.1-RELEASE
 --------------      ---------------
-dns                 15.0-RELEASE-p10
-postfix             15.0-RELEASE-p10
-nagios              15.0-RELEASE-p10
-haproxy             15.0-RELEASE-p10
-influxdb            15.0-RELEASE-p10
-grafana             15.0-RELEASE-p10
-mongodb             15.0-RELEASE-p10
+dns                 15.1-RELEASE
+postfix             15.0-RELEASE-p10  ⚠️
+influxdb            15.0-RELEASE-p10  ⚠️
+grafana             15.0-RELEASE-p10  ⚠️
+unifi               15.0-RELEASE-p10  ⚠️
 ```
 
 ### Upgrade FreeBSD version(s)
