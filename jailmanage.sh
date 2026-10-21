@@ -548,7 +548,7 @@ _get_all_jails()
 
 	if [ -f "/etc/jail.conf" ];
 	then
-		DEFINED_JAILS=$(grep '{' /etc/jail.conf | grep -v '^#' | awk '{ print $1 }')
+		DEFINED_JAILS=$(awk '$1 !~ /^#/ && $2 == "{" {print $1}' < /etc/jail.conf)
 		for _j in ${DEFINED_JAILS}
 		do
 			if [ -d "$(jail_root_path $_j)" ]; then
