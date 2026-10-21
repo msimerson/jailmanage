@@ -182,7 +182,7 @@ jail_update_one()
 
 	local _fuconf="$_jrpath/etc/freebsd-update.conf"
 	local _running; _running=$(chroot "$_jrpath" /bin/freebsd-version)
-	local _update="/usr/sbin/freebsd-update -b $_jrpath --currently-running "$_running" -f $_fuconf"
+	local _update="/usr/sbin/freebsd-update -b $_jrpath --currently-running $_running -f $_fuconf"
 
 	if [ "$HOST_MAJ_VER" = "$JAIL_MAJ_VER" ];
 	then
